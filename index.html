@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ribennji Tasks</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <img src="assets/ribennji-mark.svg" alt="" class="brand-mark">
+          <div>
+            <p class="eyebrow">Ribennji</p>
+            <h1>Task Board</h1>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-button" id="exportButton" type="button" title="エクスポート" aria-label="エクスポート">
+            <span aria-hidden="true">⇩</span>
+          </button>
+          <label class="import-button icon-button" title="インポート" aria-label="インポート">
+            <span aria-hidden="true">⇧</span>
+            <input id="importInput" type="file" accept="application/json">
+          </label>
+          <button class="primary-button" id="quickAddButton" type="button">
+            <span aria-hidden="true">+</span>
+            <span>タスク追加</span>
+          </button>
+        </div>
+      </header>
+
+      <main>
+        <section class="summary-grid" aria-label="タスク概要">
+          <article class="summary-item">
+            <span class="summary-label">全体</span>
+            <strong id="totalCount">0</strong>
+          </article>
+          <article class="summary-item">
+            <span class="summary-label">進行中</span>
+            <strong id="activeCount">0</strong>
+          </article>
+          <article class="summary-item">
+            <span class="summary-label">期限間近</span>
+            <strong id="soonCount">0</strong>
+          </article>
+          <article class="summary-item is-danger">
+            <span class="summary-label">期限超過</span>
+            <strong id="overdueCount">0</strong>
+          </article>
+        </section>
+
+        <section class="workspace">
+          <aside class="task-form-panel" aria-label="タスク作成">
+            <form id="taskForm" class="task-form">
+              <div class="form-head">
+                <h2>新規タスク</h2>
+                <button class="icon-button panel-close" id="closeFormButton" type="button" title="閉じる" aria-label="閉じる">
+                  <span aria-hidden="true">×</span>
+                </button>
+              </div>
+
+              <label class="field">
+                <span>タイトル</span>
+                <input id="titleInput" name="title" type="text" required maxlength="80" placeholder="例: 見積もりの確認">
+              </label>
+
+              <label class="field">
+                <span>プロジェクト</span>
+                <input id="projectInput" name="project" type="text" maxlength="40" placeholder="例: 営業">
+              </label>
+
+              <div class="field-row">
+                <label class="field">
+                  <span>期限</span>
+                  <input id="dueInput" name="due" type="date">
+                </label>
+                <label class="field">
+                  <span>ステータス</span>
+                  <select id="statusInput" name="status">
+                    <option value="todo">未着手</option>
+                    <option value="doing">進行中</option>
+                    <option value="review">確認</option>
+                    <option value="done">完了</option>
+                  </select>
+                </label>
+              </div>
+
+              <fieldset class="segmented-field">
+                <legend>優先度</legend>
+                <label>
+                  <input type="radio" name="priority" value="low">
+                  <span><i class="swatch low"></i>低</span>
+                </label>
+                <label>
+                  <input type="radio" name="priority" value="medium" checked>
+                  <span><i class="swatch medium"></i>中</span>
+                </label>
+                <label>
+                  <input type="radio" name="priority" value="high">
+                  <span><i class="swatch high"></i>高</span>
+                </label>
+              </fieldset>
+
+              <label class="field">
+                <span>メモ</span>
+                <textarea id="notesInput" name="notes" rows="4" maxlength="240" placeholder="必要な情報を短く残す"></textarea>
+              </label>
+
+              <button class="primary-button submit-button" type="submit">
+                <span aria-hidden="true">+</span>
+                <span>追加</span>
+              </button>
+            </form>
+          </aside>
+
+          <section class="task-area" aria-label="タスク一覧">
+            <div class="toolbar">
+              <div class="search-wrap">
+                <span aria-hidden="true">⌕</span>
+                <input id="searchInput" type="search" placeholder="検索">
+              </div>
+
+              <div class="view-tabs" role="tablist" aria-label="表示切り替え">
+                <button class="tab-button is-active" type="button" data-view="board" role="tab" aria-selected="true">ボード</button>
+                <button class="tab-button" type="button" data-view="list" role="tab" aria-selected="false">リスト</button>
+                <button class="tab-button" type="button" data-view="focus" role="tab" aria-selected="false">集中</button>
+              </div>
+
+              <label class="select-control">
+                <span>優先度</span>
+                <select id="priorityFilter">
+                  <option value="all">すべて</option>
+                  <option value="high">高</option>
+                  <option value="medium">中</option>
+                  <option value="low">低</option>
+                </select>
+              </label>
+
+              <label class="select-control">
+                <span>並び順</span>
+                <select id="sortSelect">
+                  <option value="due">期限</option>
+                  <option value="priority">優先度</option>
+                  <option value="created">作成日</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="status-tabs" role="tablist" aria-label="ステータス絞り込み">
+              <button class="filter-chip is-active" type="button" data-status="all">すべて</button>
+              <button class="filter-chip" type="button" data-status="todo">未着手</button>
+              <button class="filter-chip" type="button" data-status="doing">進行中</button>
+              <button class="filter-chip" type="button" data-status="review">確認</button>
+              <button class="filter-chip" type="button" data-status="done">完了</button>
+            </div>
+
+            <div id="boardView" class="board-view"></div>
+            <div id="listView" class="list-view" hidden></div>
+            <div id="focusView" class="focus-view" hidden></div>
+            <div id="emptyState" class="empty-state" hidden>
+              <h2>タスクがありません</h2>
+              <p>条件を変えるか、新しいタスクを追加してください。</p>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="editDialog" class="edit-dialog">
+      <form id="editForm" method="dialog" class="task-form">
+        <div class="form-head">
+          <h2>タスク編集</h2>
+          <button class="icon-button" id="dialogCloseButton" type="button" title="閉じる" aria-label="閉じる">
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+        <input id="editIdInput" type="hidden">
+        <label class="field">
+          <span>タイトル</span>
+          <input id="editTitleInput" type="text" required maxlength="80">
+        </label>
+        <label class="field">
+          <span>プロジェクト</span>
+          <input id="editProjectInput" type="text" maxlength="40">
+        </label>
+        <div class="field-row">
+          <label class="field">
+            <span>期限</span>
+            <input id="editDueInput" type="date">
+          </label>
+          <label class="field">
+            <span>ステータス</span>
+            <select id="editStatusInput">
+              <option value="todo">未着手</option>
+              <option value="doing">進行中</option>
+              <option value="review">確認</option>
+              <option value="done">完了</option>
+            </select>
+          </label>
+        </div>
+        <fieldset class="segmented-field">
+          <legend>優先度</legend>
+          <label>
+            <input type="radio" name="editPriority" value="low">
+            <span><i class="swatch low"></i>低</span>
+          </label>
+          <label>
+            <input type="radio" name="editPriority" value="medium">
+            <span><i class="swatch medium"></i>中</span>
+          </label>
+          <label>
+            <input type="radio" name="editPriority" value="high">
+            <span><i class="swatch high"></i>高</span>
+          </label>
+        </fieldset>
+        <label class="field">
+          <span>メモ</span>
+          <textarea id="editNotesInput" rows="4" maxlength="240"></textarea>
+        </label>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="deleteButton" type="button">
+            <span aria-hidden="true">×</span>
+            <span>削除</span>
+          </button>
+          <button class="primary-button" id="saveEditButton" type="submit">
+            <span aria-hidden="true">✓</span>
+            <span>保存</span>
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <template id="taskCardTemplate">
+      <article class="task-card" draggable="true">
+        <div class="task-card-head">
+          <span class="priority-pill"></span>
+          <button class="icon-button task-edit" type="button" title="編集" aria-label="編集">
+            <span aria-hidden="true">✎</span>
+          </button>
+        </div>
+        <h3></h3>
+        <p class="task-notes"></p>
+        <div class="task-meta"></div>
+        <div class="task-actions">
+          <button class="icon-button status-prev" type="button" title="前へ" aria-label="前へ">
+            <span aria-hidden="true">←</span>
+          </button>
+          <button class="icon-button task-complete" type="button" title="完了" aria-label="完了">
+            <span aria-hidden="true">✓</span>
+          </button>
+          <button class="icon-button status-next" type="button" title="次へ" aria-label="次へ">
+            <span aria-hidden="true">→</span>
+          </button>
+        </div>
+      </article>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
