@@ -27,6 +27,8 @@ const elements = {
   activeCount: document.querySelector("#activeCount"),
   soonCount: document.querySelector("#soonCount"),
   overdueCount: document.querySelector("#overdueCount"),
+  projectSummary: document.querySelector("#projectSummary"),
+  projectSummaryCount: document.querySelector("#projectSummaryCount"),
   taskForm: document.querySelector("#taskForm"),
   taskFormPanel: document.querySelector(".task-form-panel"),
   quickAddButton: document.querySelector("#quickAddButton"),
@@ -181,6 +183,7 @@ elements.importInput.addEventListener("change", async (event) => {
 
 function render() {
   renderSummary();
+  renderProjectSummary();
   const tasks = getVisibleTasks();
   const hasTasks = tasks.length > 0;
 
@@ -211,6 +214,40 @@ function renderSummary() {
   elements.activeCount.textContent = String(activeTasks.length);
   elements.soonCount.textContent = String(soonTasks.length);
   elements.overdueCount.textContent = String(overdueTasks.length);
+}
+
+function renderProjectSummary() {
+  const summaries = getProjectSummaries();
+  elements.projectSummary.replaceChildren();
+  elements.projectSummaryCount.textContent = `${summaries.length}件`;
+
+  if (summaries.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "project-empty";
+    empty.textContent = "プロジェクトはまだありません。";
+    elements.projectSummary.append(empty);
+    return;
+  }
+
+  summaries.forEach((summary) => {
+    const item = document.createElement("article");
+    item.className = "project-item";
+    item.innerHTML = `
+      <div class="project-item-head">
+        <h3>${escapeHtml(summary.name)}</h3>
+        <span>${summary.done}/${summary.total}</span>
+      </div>
+      <div class="progress-track" aria-label="${escapeHtml(summary.name)} の完了率 ${summary.percent}%">
+        <span style="width: ${summary.percent}%"></span>
+      </div>
+      <div class="project-metrics">
+        <span>未完了 ${summary.active}</span>
+        <span>期限超過 ${summary.overdue}</span>
+        <strong>${summary.percent}%</strong>
+      </div>
+    `;
+    elements.projectSummary.append(item);
+  });
 }
 
 function renderBoard(tasks) {
@@ -405,6 +442,39 @@ function getVisibleTasks() {
     .sort(sortTasks);
 }
 
+function getProjectSummaries() {
+  const map = new Map();
+
+  state.tasks.forEach((task) => {
+    const name = getProjectName(task);
+    if (!map.has(name)) {
+      map.set(name, {
+        name,
+        total: 0,
+        done: 0,
+        active: 0,
+        overdue: 0,
+      });
+    }
+
+    const summary = map.get(name);
+    summary.total += 1;
+    if (task.status === "done") {
+      summary.done += 1;
+    } else {
+      summary.active += 1;
+      if (isOverdue(task)) summary.overdue += 1;
+    }
+  });
+
+  return [...map.values()]
+    .map((summary) => ({
+      ...summary,
+      percent: Math.round((summary.done / summary.total) * 100),
+    }))
+    .sort((a, b) => b.active - a.active || b.total - a.total || a.name.localeCompare(b.name, "ja"));
+}
+
 function sortTasks(a, b) {
   if (state.sort === "priority") {
     return priorities[b.priority].rank - priorities[a.priority].rank || compareDates(a.due, b.due);
@@ -498,6 +568,10 @@ function formatDue(task) {
 
 function getStatusLabel(statusId) {
   return statuses.find((status) => status.id === statusId)?.label || statusId;
+}
+
+function getProjectName(task) {
+  return String(task.project || "").trim() || "未分類";
 }
 
 function isOverdue(task) {
